@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+  <link rel="stylesheet" href="css/agile-list.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="./js/burndown.js"></script>
+</head>
+
+<body>
+  <div id="wrappper">
+    <div id="burndown_chart" style="width:700px;height:400px;"></div>
+    <div class="dashboard">
+      <div class="row">
+        <div class="column">
+          <div class="cell label color1">TOTAL</div>
+          <div class="cell data color1" id="total">0</div>
+        </div>
+        <div class="column">
+          <div class="cell label color2">OPEN</div>
+          <div class="cell data color2" id="open">0</div>
+        </div>
+        <div class="column">
+          <div class="cell label color3">CLOSED</div>
+          <div class="cell data color3" id="closed">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
