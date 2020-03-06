@@ -14,3 +14,4 @@ You can then click on the elipsis (...) button on the list and click burndown to
 is doing. Like this:
 
 ![Burning Up](docs/images/agile_list_burnup.png)
+<img src="docs/images/agile_list_burnup.png">
