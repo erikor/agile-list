@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+
+<head>
+    <meta charset=utf-8>
+    <title>Authorize</title>
+    <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css">
+    <link rel="stylesheet" href="css/agile-list.css">
+</head>
+
+<body>
+    <div class=wrapper style="width: 300px"><center>
+    <div>
+        <img src=https://cdn.glitch.com/887f85df-ab2b-4f40-adbd-d398dbe3db47%2Fgear_pages.png?v=1583345789415 width=40>
+    </div>
+    Hi. Agile-list needs your authorization to enable it's advanced features. 
+    <button type=button>Click to authorize</button>
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        var t = window.TrelloPowerUp.iframe({
+            appKey: '28acb4da97cf3fa100161cbb0315d04a',
+            appName: 'agile-list'
+        });
+        t.render(function () {
+            document.querySelector('button').addEventListener('click', function () {
+                t.getRestApi()
+                    .authorize({ scope: 'read,write' })
+                    .then(function(d) {
+                        t.closePopup()
+                        t.modal({
+                            title: "It's burning up in here...",
+                            url: "burndown.html",
+                            height: 500
+                        });
+                    })   
+                    .catch(TrelloPowerUp.restApiError.AuthDeniedError, function () {
+                        alert("Not authorized. Click Burn Up Chart to try again.");
+                        t.closePopup()
+                    })
+
+            }, false);
+        });
+    </script>
+    </center>
+    </div>
+</body>
+
+</html>
