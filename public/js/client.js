@@ -1,5 +1,21 @@
 var BLACK_GEAR = 'https://cdn.glitch.com/887f85df-ab2b-4f40-adbd-d398dbe3db47%2Fefficiency.png?v=1583345922635'
 
+function showIframe(t) {
+  return t.popup({
+    title: 'Authorize to continue',
+    url: './authorize.html'
+  });
+}
+
+function showMenu(t) {
+  return t.popup({
+    title: 'Do something cool',
+    items: [
+      // …
+    ]
+  });
+}
+
 TrelloPowerUp.initialize({
   'card-buttons': function(t, options) {
     return [{
@@ -36,23 +52,36 @@ TrelloPowerUp.initialize({
     });
   },
   'list-actions': function (t) {
-    return t.list('name', 'id')
-    .then(function (list) {
-      return [{
-        text: "Burn Up Chart",
-        callback: function (t) {
-          // Trello will call this if the user clicks on this action
-          // we could for example open a new popover...
-          t.modal({
-            title: "It's burning up in here...",
-            url: "burndown.html",
-            height: 500
-          });
-        }
-      }];
+    return t.getRestApi()
+    .isAuthorized()
+    .then(function(isAuthorized) {
+      if (isAuthorized) {
+        return [{
+          text: "Burn Up Chart",
+          callback: function (t) {
+            t.modal({
+              title: "It's burning up in here...",
+              url: "burndown.html",
+              height: 500
+            });
+          }
+        }];
+      } else {
+        return [{
+          text: 'Burn Up Chart',
+          callback: getAuth
+        }];
+      }
     });
    },
 },{
   appKey: '28acb4da97cf3fa100161cbb0315d04a',
   appName: 'agile-list'
 });
+
+function getAuth(t) {
+  return t.popup({
+    title: 'Authorize to continue',
+    url: './authorize.html'
+  })
+}

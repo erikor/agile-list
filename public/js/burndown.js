@@ -32,6 +32,91 @@ function getDates(cards) {
   return(cards.map(getDate));
 }
 
+function apiCard(card, endpoint) {
+  var url = "https://api.trello.com/1/cards/" + card.id + "/" + endpoint;
+  var p = t.getRestApi()
+  .getToken()
+  .then(function(token) {
+   return($.get(url, {key: t.restApi.appKey, token: token}));
+  })
+  return(p);
+}
+
+// let re = /ab+c/;
+function apiCardActions(card, filter = "all") {
+  var url = "https://api.trello.com/1/cards/" + card.id + "/actions";
+  var p = t.getRestApi()
+  .getToken()
+  .then(function(token) {
+   return($.get(url, {key: t.restApi.appKey, token: token, filter: filter}));
+  });
+  return(p);
+}
+
+function getChecklistEstimates(card) {
+  let p = apiChecklistItems(card)
+  .then(function(items) {
+    let re = /^\[(\d+)\]/;
+    let pointsItems = items.filter(a => a.name.match(re));
+    let actions = {};
+    pointsItems = pointsItems.map(function(i) {
+      actions[i.id] = { date: i.date, 
+                        estimate: Number(i.name.match(re)[1]),
+                        finishedDate: null };
+    })
+    if(pointsItems.length == 0) { 
+      return(Promise.resolve([]));
+    } else {
+      let ret = [];
+      let p = apiCardActions(card, "updateCheckItemStateOnCard")
+      .then(function(data) {  
+        // want the latest action last. also I am not sure these are 
+        // guaranteed to be in chronological order, so we will make sure
+        data = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        data = data.filter(d => d.data.checkItem.name.match(re));
+        // remove any checklist items that no longer exist
+        data = data.filter(d => actions[d.data.checkItem.id])
+        data.map(function(d) {
+          let finishedDate = d.data.checkItem.state == "complete" ? new Date(d.date) : null;
+          actions[d.data.checkItem.id].finishedDate = finishedDate;
+        });
+        // convert from name value pairs to array
+        for(k in actions) {
+          ret.push(actions[k]);
+        }
+        return(ret);
+      })
+      return(p)
+    } 
+  })
+  return(p);
+}
+// get check list items which match [#]
+
+function apiChecklistItems(card) {
+  var url = "https://api.trello.com/1/cards/" + card.id + "/checklists";
+  var p = t.getRestApi()
+  .getToken()
+  .then(function(token) {
+   return($.get(url, {key: t.restApi.appKey, token: token, checkItem_fields: ["name", "state"]}));
+  })
+  .then(function(data) {
+    var list = [];
+    if(data.length) {
+      list = data.map(function(d) {
+        var items = d.checkItems;
+        items <- items.map(function(i) {
+          i.date = getDateId(i.id)
+        })
+        return(items);
+      })
+      list = list.reduce((a,b) => a.concat(b))
+    }
+    return(list)
+  });
+  return(p);
+}
+
 function isGreen(cards) {
    var res = cards.map(function(c) {
     var res = c.labels.map(l => l.color == "green");
@@ -58,10 +143,28 @@ function runSum(a) {
   return rs;
 }
 
-function getEstimates(cards) {
+function getEstimates(c) {
+  var cards = c;
+  var estimates=[];
   var p = Promise.map(cards, card =>
     t.get(card.id, "shared", "estimate", "0")
-  );
+  )
+  .then(function(data) {
+    for(i in cards) {
+      estimates.push({date: getDate(cards[i]),
+                      estimate: data[i],
+                      finishedDate: finishedDate(cards[i])})
+    }
+    let p = Promise.map(cards, card =>
+      getChecklistEstimates(card)
+    )
+    return(p)
+  })
+  .then(function(data) {
+    data <- data.reduce((a,b) => a.concat(b))
+    data.map(d => estimates = estimates.concat(d))
+    return(estimates)
+  });
   return p; 
 }
 
@@ -72,20 +175,20 @@ function toTrace(data, name, color, width) {
   if(!name) {
     name = "trace"
   }
-
-  // make sure data includes today
+  // make sure data includes today, and starts from zero points
   rs.push(rs[rs.length - 1]);
-  dates.push(new Date(Date.now()).getTime());
+  rs = [0].concat(rs);
+  dates.push(new Date(Date.now()));
+  dates = [dates[0] - 24 * 60 * 60 * 1000].concat(dates)
 
   var trace = {
-    type: "scatter",
-    x: data.map(d => d.date),
+    x: dates,
     y: rs,
-    mode: "lines",
+    mode: "lines+markers",
     name: name,
     line: {
       color: color | "black",
-      width: width | 1
+      width: width | 2
     }
   }
   return(trace);
@@ -95,16 +198,15 @@ function toTrace(data, name, color, width) {
 t.render(function() {
   var estimates;
   var list;
-
-  t.list("cards")
+  return t.list("cards")
     .then(function(data) {
       list = data;
       return(getEstimates(list.cards));
     })
     .then(function(data) {
       estimates = data;
-      var dates = getDates(list.cards);
-      var finDates = getFinishedDates(list.cards);
+      var dates = estimates.map(e => e.date);
+      var finDates = estimates.map(e => e.finishedDate);
       var green = isGreen(list.cards)
       var newWork = [];
       var completedWork = [];
@@ -114,40 +216,22 @@ t.render(function() {
 
       for (var i in dates) {
         newWork.push({
-          estimate: Number(estimates[i]),
+          estimate: Number(estimates[i].estimate),
           date: dates[i],
           done: green[i]
         });
       }
-
       for (var i in finDates) {
         if (finDates[i]) {
-          completedWork.push({ estimate: estimates[i], date: finDates[i], done: true });
-          closed += Number(estimates[i]);
+          completedWork.push({ estimate: estimates[i].estimate, date: finDates[i], done: true });
+          closed += Number(estimates[i].estimate);
         }
       }
 
-      var chart = document.getElementById("burndown_chart");
       var trace1 = toTrace(newWork, "New", "rgb(219, 64, 82)", 3);
       var trace2 = toTrace(completedWork, "Completed", "rgb(55, 128, 191)", 3)
-      console.log(trace1)
-      var start = trace1.x[0].getTime()
-      var end = new Date(Date.now() + 14).getTime();
-
-      Plotly.newPlot(
-        chart,
-        [trace1, trace2],
-        { 
-          margin: { t: 20 }, 
-          xaxis: {
-            range: [start, end]
-          }
-        },
-        { 
-          displayModeBar: true 
-        }
-      );
-
+      plotChart(trace1, trace2);
+  
       total = trace1.y[trace1.y.length - 1]
       open = total - closed;
       $("#total").html(total);
@@ -155,6 +239,93 @@ t.render(function() {
       $("#closed").html(closed);
     });
 });
+
+var plotChart = function(t1, t2) {
+  var chart = document.getElementById("burndown_chart");
+  var xmin = Math.min(...t1.x);
+  var xmax = Math.max(...t1.x);
+  var ymin = 0;
+  var ymax = Math.max(...t1.y);
+
+  // intialize y values to zero so we can animate.
+  // because, animation. Some gymnastics are required
+  // to avoid problems related to references and promises.
+  let y1_orig = [...t1.y];
+  let y1 = y1_orig.map(a => 0)
+  let y2_orig = [...t2.y];
+  let y2 = y2_orig.map(a => 0)
+  x1 = t1.x;
+  x2 = t2.x
+
+  Plotly.newPlot(
+    chart,
+    //data
+    [
+     {x: x1, y: y1, mode: "markers", name: t1.name, line: t1.line}, 
+     {x: x2, y: y2, mode: "markers", name: t2.name, line: t2.line}
+    ], 
+    //layout
+    { 
+      margin: { t: 20 }, 
+      xaxis: {
+        'tickfont': {
+          'family': 'Open Sans, sans-serif',
+          'size': 18,
+          'color': 'lightgrey'
+        },
+        range: [xmin, xmax + (2 * 24 * 60 * 60 * 1000)],
+        'tickformat': '%m/%d',
+        'tickangle': 45
+      },
+      yaxis: {
+        'title': '<b>Story Points</b>',
+        'tickfont': {
+          'family': 'Open Sans, sans-serif',
+          'size': 18,
+          'color': 'lightgrey'
+        },
+        range: [ymin, ymax * 1.2],
+        'titlefont': {
+          'family': 'Open Sans, sans-serif',
+          'size': 18,
+          'color': 'lightgrey'
+        }
+      }
+    },
+    //options
+    { 
+      displayModeBar: true 
+    }
+  ).then(function() {
+    Plotly.animate(chart, {
+        data: [{y: y1_orig, x: x1, mode: "markers"},
+               {y: y2_orig, x: x2, mode: "markers"}],
+        traces: [0,1],
+        layout: {}
+      }, {
+        transition: [
+          {duration: 1000, easing: 'elastic-in'}
+      ],
+        frame: {
+          duration: 1000
+        }
+      });
+  })
+  .then(function() {
+    Plotly.animate(chart, {
+        data: [{mode: t1.mode}, {mode: t2.mode}],
+        traces: [0,1],
+        layout: {}
+      }, {
+        transition: [
+          {duration: 500, easing: 'elastic-in-out'}
+      ],
+        frame: {
+          duration: 500
+        }
+      });
+  })
+}
 
 // t.render(function() {
 //   t.list("cards")

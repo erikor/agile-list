@@ -3,6 +3,7 @@
 .wrapper {
     width: 500px;
     margin: auto;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .dashboard {
@@ -11,7 +12,6 @@
 }
 
 .cell {
-  font-family: 'Open Sans', sans-serif;
   color: white;
 }
 
