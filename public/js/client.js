@@ -1,21 +1,5 @@
 var BLACK_GEAR = 'https://cdn.glitch.com/887f85df-ab2b-4f40-adbd-d398dbe3db47%2Fefficiency.png?v=1583345922635'
 
-function showIframe(t) {
-  return t.popup({
-    title: 'Authorize to continue',
-    url: './authorize.html'
-  });
-}
-
-function showMenu(t) {
-  return t.popup({
-    title: 'Do something cool',
-    items: [
-      // …
-    ]
-  });
-}
-
 TrelloPowerUp.initialize({
   'card-buttons': function(t, options) {
     return [{
@@ -31,15 +15,12 @@ TrelloPowerUp.initialize({
   },
   'card-badges': function(t, options) {
     var estimate = 0;
+    var id = null;
+    var name = "";
     return t.get('card', 'shared', 'estimate')
     .then(function(est) {
+      id = t.getContext().card;
       estimate = est;
-      return(t.card('name'));
-    })  
-    .then(function(card) {
-      if(card.name == "Notes & Minutes" || card.name == "Manuscript Components" ) {
-        return null;
-      }
       var color = "light-gray";
       if(estimate > 0) color = "green";
       if(estimate > 10) color = "yellow";
@@ -47,7 +28,15 @@ TrelloPowerUp.initialize({
       return [{
         icon: BLACK_GEAR,
         text: estimate || '0',
-        color: color,
+        color: color
+      }];
+    })
+    .catch(function(e) {
+      console.log(e);
+      return [{
+        icon: BLACK_GEAR,
+        text: 'NA',
+        color: "red"
       }];
     });
   },

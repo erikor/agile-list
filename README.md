@@ -10,8 +10,3 @@ be displayed in a badge on the front of the card. You can *also* add story point
 by prepending the item with a number in brackets. (Currently these story points are not added to the 
 badge total on the front of the card. Holy feature request, batman!).
 
-You can then click on the elipsis (...) button on the list and click burndown to see how your project 
-is doing. Like this:
-
-![Burning Up](docs/images/agile_list_burnup.png)
-<img src="docs/images/agile_list_burnup.png">
