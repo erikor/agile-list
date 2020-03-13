@@ -4,11 +4,12 @@
   "description": "Agile project management, one list at a time.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+      "start": "node server.js",
+      "start-pm": "pm2 start server.js --watch"
   },
   "dependencies": {
-    "express": "^4.15.2",
-    "cors": "^2.8.3"
+    "cors": "^2.8.3",
+    "express": "^4.15.2"
   },
   "engines": {
     "node": "6.10.x"
