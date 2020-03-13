@@ -10,3 +10,31 @@ be displayed in a badge on the front of the card. You can *also* add story point
 by prepending the item with a number in brackets. (Currently these story points are not added to the 
 badge total on the front of the card. Holy feature request, batman!).
 
+# Installation
+
+## Pre-requisites
+
+```
+sudo apt install nodejs
+sudo apt install npm
+sudo apt install authbind
+
+sudo touch /etc/authbind/byport/80
+# substitute username of user that will start server for %user% below
+sudo chown %user% /etc/authbind/byport/80
+sudo chmod 755 /etc/authbind/byport/80
+
+npm install -g pm2
+```
+
+Then clone app and start
+
+```
+git clone https://github.com/erikor/agile-list
+cd agile-list
+npm install
+
+export PORT=80
+# --watch flag is optional, only useful in devel
+authbind --deep pm2 server.js --watch --name agile
+```
